@@ -121,7 +121,7 @@ class ThirdPartyLibraryService {
           $thirdPartyLibrary->setType($type);
         }
 
-        $thirdPartyLibrary->addSite($site->getId(), $site->getName(), $item['version']);
+        $thirdPartyLibrary->addSite($site, $item['version']);
         $this->thirdPartyManager->saveDocument($thirdPartyLibrary);
       }
     }
