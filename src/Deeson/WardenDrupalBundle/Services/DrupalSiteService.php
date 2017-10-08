@@ -182,22 +182,22 @@ class DrupalSiteService {
 
     // Check if Drupal core requires a security update.
     if ($site->hasOlderCoreVersion() && $site->getIsSecurityCoreVersion()) {
-      $event->addTemplate('DeesonWardenBundle:Drupal:securityUpdateRequired.html.twig');
+      $event->addTemplate('DeesonWardenDrupalBundle:Sites:securityUpdateRequired.html.twig');
     }
 
-    $event->addTemplate('DeesonWardenBundle:Drupal:siteDetails.html.twig');
+    $event->addTemplate('DeesonWardenDrupalBundle:Sites:siteDetails.html.twig');
     $event->addParam('coreVersion', $site->getCoreVersion());
     $event->addParam('latestCoreVersion', $site->getLatestCoreVersion());
 
     // Check if there are any Drupal modules that require updates.
     $modulesRequiringUpdates = $site->getModulesRequiringUpdates();
     if (!empty($modulesRequiringUpdates)) {
-      $event->addTabTemplate('modules', 'DeesonWardenBundle:Drupal:moduleUpdates.html.twig');
+      $event->addTabTemplate('modules', 'DeesonWardenDrupalBundle:Sites:moduleUpdates.html.twig');
       $event->addParam('modulesRequiringUpdates', $modulesRequiringUpdates);
     }
 
     // List the Drupal modules that used on the site.
-    $event->addTabTemplate('modules', 'DeesonWardenBundle:Drupal:modules.html.twig');
+    $event->addTabTemplate('modules', 'DeesonWardenDrupalBundle:Sites:modules.html.twig');
     $event->addParam('modules', $site->getModules());
 
     $this->logger->addInfo('This is the end of a Drupal show site event: ' . $site->getUrl());
