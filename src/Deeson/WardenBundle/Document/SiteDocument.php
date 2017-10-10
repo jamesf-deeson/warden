@@ -3,7 +3,6 @@
 namespace Deeson\WardenBundle\Document;
 
 use Deeson\WardenBundle\Exception\DocumentNotFoundException;
-use Deeson\WardenBundle\Managers\ModuleManager;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as MongoDB;
 
 /**
@@ -48,12 +47,6 @@ class SiteDocument extends BaseDocument {
    * @todo move this into the DrupalSiteService
    */
   protected $modules;
-
-  /**
-   * @Mongodb\Hash
-   * @todo move this into the ThirdpartyService
-   */
-  protected $libraries;
 
   /**
    * @Mongodb\Field(type="string")
@@ -251,38 +244,6 @@ class SiteDocument extends BaseDocument {
   }
 
   /**
-   * Get the site third party libraries.
-   * @todo move this into the DrupalSiteService
-   *
-   * @return mixed
-   */
-  public function getLibraries() {
-    return (!empty($this->libraries)) ? $this->libraries : array();
-  }
-
-  /**
-   * Set the current third party libraries for the site.
-   * @todo move this into the Thirdpartylibraryservice
-   *
-   * @param array $libraryData
-   *   List of third party library data to add to the site.
-   */
-  public function setLibraries($libraryData) {
-    $libraryList = array();
-    foreach ($libraryData as $type => $typeData) {
-      foreach ($typeData as $name => $version) {
-        $libraryList[$type][] = array(
-          'name' => $name,
-          'version' => $version,
-        );
-      }
-      ksort($libraryList[$type]);
-    }
-    ksort($libraryList);
-    $this->libraries = $libraryList;
-  }
-
-  /**
    * Gets a modules latest version for the site.
    * @todo move this into the DrupalSiteService
    *
@@ -389,11 +350,11 @@ class SiteDocument extends BaseDocument {
    * This updates the list of modules that this site has with the module documents.
    * @todo move this into the DrupalSiteService
    *
-   * @param ModuleManager $moduleManager
+   * @param \Deeson\WardenDrupalBundle\Managers\ModuleManager $moduleManager
    *
    * @throws DocumentNotFoundException
    */
-  public function updateModules(ModuleManager $moduleManager) {
+  public function updateModules(\Deeson\WardenDrupalBundle\Managers\ModuleManager $moduleManager) {
     foreach ($this->getModules() as $siteModule) {
       /** @var ModuleDocument $module */
       $module = $moduleManager->findByProjectName($siteModule['name']);

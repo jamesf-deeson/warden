@@ -7,7 +7,9 @@ use Deeson\WardenBundle\Event\SiteShowEvent;
 use Deeson\WardenBundle\Event\SiteUpdateEvent;
 use Deeson\WardenBundle\Managers\SiteManager;
 use Deeson\WardenThirdPartyLibraryBundle\Document\ThirdPartyLibraryDocument;
+use Deeson\WardenThirdPartyLibraryBundle\Document\SiteThirdPartyLibraryDocument;
 use Deeson\WardenThirdPartyLibraryBundle\Managers\ThirdPartyLibraryManager;
+use Deeson\WardenThirdPartyLibraryBundle\Managers\SiteThirdPartyLibraryManager;
 use Monolog\Logger;
 
 class ThirdPartyLibraryService {
@@ -27,10 +29,16 @@ class ThirdPartyLibraryService {
    */
   protected $thirdPartyManager;
 
-  public function __construct($doctrine, Logger $logger, SiteManager $siteManager, ThirdPartyLibraryManager $thirdPartyManager) {
+  /**
+   * @var SiteThirdPartyLibraryManager
+   */
+  protected $siteThirdPartyManager;
+
+  public function __construct($doctrine, Logger $logger, SiteManager $siteManager, ThirdPartyLibraryManager $thirdPartyManager, SiteThirdPartyLibraryManager $siteThirdPartyManager) {
     $this->logger = $logger;
     $this->siteManager = $siteManager;
     $this->thirdPartyManager = $thirdPartyManager;
+    $this->siteThirdPartyManager = $siteThirdPartyManager;
   }
 
   /**
@@ -48,10 +56,16 @@ class ThirdPartyLibraryService {
    * @param SiteShowEvent $event
    */
   public function onWardenSiteShow(SiteShowEvent $event) {
+    /** @var SiteDocument $site */
     $site = $event->getSite();
+    /** @var SiteThirdPartyLibraryDocument $siteLibrary */
+    $siteLibrary = $this->siteThirdPartyManager->findBySiteId($site->getId());
+    if (empty($siteLibrary)) {
+      return;
+    }
 
     // List the third party libraries that are used on the site.
-    $libraries = $site->getLibraries();
+    $libraries = $siteLibrary->getLibraries();
     if (!empty($libraries)) {
       foreach ($libraries as $type => $data) {
         if ($this->isDataInOldFormat($data)) {
@@ -71,22 +85,32 @@ class ThirdPartyLibraryService {
    */
   public function onWardenSiteUpdate(SiteUpdateEvent $event) {
     $data = $event->getData();
+    /** @var SiteDocument $site */
     $site = $event->getSite();
     $this->logger->addInfo("Updating libraries for: " . $site->getName());
+
+    /** @var SiteThirdPartyLibraryDocument $siteLibrary */
+    $siteLibrary = $this->siteThirdPartyManager->findBySiteId($site->getId());
+    if (empty($siteLibrary)) {
+      $siteLibrary = $this->siteThirdPartyManager->makeNewItem();
+      $siteLibrary->setSiteId($site->getId());
+    }
+
     $libraryData = array();
     if (isset($data->library) && is_object($data->library)) {
       $library = json_decode(json_encode($data->library), TRUE);
       $libraryData = (is_array($library)) ? $library : NULL;
     }
-    $site->setLibraries($libraryData);
+    $siteLibrary->setLibraries($libraryData);
+    $this->siteThirdPartyManager->saveDocument($siteLibrary);
   }
 
   /**
    * Build the list of third party library details from the sites.
    */
   public function buildList() {
-    $sites = $this->siteManager->getAllDocuments();
     $this->thirdPartyManager->deleteAll();
+    $sites = $this->siteManager->getAllDocuments();
 
     foreach ($sites as $site) {
       /** @var SiteDocument $site */
@@ -100,7 +124,14 @@ class ThirdPartyLibraryService {
    * @param SiteDocument $site
    */
   protected function addSiteLibraries(SiteDocument $site) {
-    $libraries = $site->getLibraries();
+    /** @var SiteThirdPartyLibraryDocument $siteLibrary */
+    $siteLibrary = $this->siteThirdPartyManager->findBySiteId($site->getId());
+    if (empty($siteLibrary)) {
+      $this->logger->addInfo("There are no third party library data for: " . $site->getName());
+      return;
+    }
+
+    $libraries = $siteLibrary->getLibraries();
     $this->logger->addInfo("Checking libraries for: " . $site->getName());
     if (empty($libraries)) {
       $this->logger->addInfo("There are no libraries available for: " . $site->getName());
@@ -112,18 +143,31 @@ class ThirdPartyLibraryService {
       if ($this->isDataInOldFormat($list)) {
         break;
       }
-      foreach ($list as $item) {
-        /** @var ThirdPartyLibraryDocument $thirdPartyLibrary */
-        $thirdPartyLibrary = $this->thirdPartyManager->getLibrary($item['name'], $type);
-        if (empty($thirdPartyLibrary)) {
-          $thirdPartyLibrary = $this->thirdPartyManager->makeNewItem();
-          $thirdPartyLibrary->setName($item['name']);
-          $thirdPartyLibrary->setType($type);
-        }
+      $this->updateThirdPartyData($site, $list, $type);
+    }
+  }
 
-        $thirdPartyLibrary->addSite($site, $item['version']);
-        $this->thirdPartyManager->saveDocument($thirdPartyLibrary);
+  /**
+   * Updates the third party data with the sites library data.
+   *
+   * @param SiteDocument $site
+   * @param array $list
+   *   The list of library data.
+   * @param string $type
+   *   The library data type.
+   */
+  protected function updateThirdPartyData(SiteDocument $site, array $list, $type) {
+    foreach ($list as $item) {
+      /** @var ThirdPartyLibraryDocument $thirdPartyLibrary */
+      $thirdPartyLibrary = $this->thirdPartyManager->getLibrary($item['name'], $type);
+      if (empty($thirdPartyLibrary)) {
+        $thirdPartyLibrary = $this->thirdPartyManager->makeNewItem();
+        $thirdPartyLibrary->setName($item['name']);
+        $thirdPartyLibrary->setType($type);
       }
+
+      $thirdPartyLibrary->addSite($site, $item['version']);
+      $this->thirdPartyManager->saveDocument($thirdPartyLibrary);
     }
   }
 
