@@ -1,10 +1,10 @@
 services:
-#    warden.drupal.module:
-#        class: Deeson\WardenDrupalBundle\Managers\ModuleManager
-#        arguments: ['@doctrine_mongodb', '@monolog.logger']
-
     warden.drupal.module_manager:
         class: Deeson\WardenDrupalBundle\Managers\ModuleManager
+        arguments: ['@doctrine_mongodb', '@monolog.logger']
+
+    warden.drupal.site_module_manager:
+        class: Deeson\WardenDrupalBundle\Managers\SiteModuleManager
         arguments: ['@doctrine_mongodb', '@monolog.logger']
 
     warden.drupal.site:

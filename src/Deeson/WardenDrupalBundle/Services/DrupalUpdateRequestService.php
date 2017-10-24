@@ -4,7 +4,7 @@ namespace Deeson\WardenDrupalBundle\Services;
 
 use Deeson\WardenBundle\Client\RequestHandlerException;
 use Deeson\WardenBundle\Client\RequestHandlerInterface;
-use Deeson\WardenBundle\Document\ModuleDocument;
+use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Managers\SiteManager;
 use Deeson\WardenDrupalBundle\Managers\ModuleManager;

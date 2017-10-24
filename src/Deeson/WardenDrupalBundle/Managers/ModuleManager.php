@@ -2,11 +2,10 @@
 
 namespace Deeson\WardenDrupalBundle\Managers;
 
-use Deeson\WardenBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Exception\DocumentNotFoundException;
-use Deeson\WardenBundle\Managers\BaseManager;
+use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 
-class ModuleManager extends BaseManager {
+class ModuleManager extends DrupalBaseManager {
 
   /**
    * Returns a boolean of whether a module with this name already exists.

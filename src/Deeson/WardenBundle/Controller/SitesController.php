@@ -3,6 +3,7 @@
 namespace Deeson\WardenBundle\Controller;
 
 use Deeson\WardenBundle\Event\DashboardUpdateEvent;
+use Deeson\WardenBundle\Event\SiteDeleteEvent;
 use Deeson\WardenBundle\Event\SiteRefreshEvent;
 use Deeson\WardenBundle\Event\SiteShowEvent;
 use Deeson\WardenBundle\Event\SiteUpdateEvent;
@@ -259,12 +260,12 @@ class SitesController extends Controller {
    *
    * @param \Deeson\WardenBundle\Document\SiteDocument $site
    */
-  protected function updateModules(SiteDocument $site) {
-    /** @var ModuleManager $moduleManager */
+  /*protected function updateModules(SiteDocument $site) {
+    /** @var ModuleManager $moduleManager *
     $moduleManager = $this->get('warden.drupal.module_manager');
 
     foreach ($site->getModules() as $siteModule) {
-      /** @var ModuleDocument $module */
+      /** @var ModuleDocument $module *
       $module = $moduleManager->findByProjectName($siteModule['name']);
       if (empty($module)) {
         print('Error getting module [' . $siteModule['name'] . ']');
@@ -273,7 +274,7 @@ class SitesController extends Controller {
       $module->removeSite($site->getId());
       $moduleManager->updateDocument();
     }
-  }
+  }*/
 
   public function EditAction($id, Request $request) {
     /** @var SiteManager $manager */

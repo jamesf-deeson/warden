@@ -46,7 +46,7 @@ class SiteDocument extends BaseDocument {
    * @Mongodb\Collection
    * @todo move this into the DrupalSiteService
    */
-  protected $modules;
+  //protected $modules;
 
   /**
    * @Mongodb\Field(type="string")
@@ -72,6 +72,11 @@ class SiteDocument extends BaseDocument {
    * @Mongodb\Field(type="string")
    */
   protected $lastSuccessfulRequest;
+
+  /**
+   * @Mongodb\Field(type="string")
+   */
+  protected $siteType;
 
   /**
    * @return mixed
@@ -140,6 +145,7 @@ class SiteDocument extends BaseDocument {
    * @param mixed $coreVersion
    */
   public function setCoreVersion($coreVersion) {
+    // @todo how to get this?
     $majorRelease = ModuleDocument::getMajorVersion($coreVersion);
     if (!isset($this->coreVersion)) {
       $this->coreVersion = array();
@@ -192,9 +198,9 @@ class SiteDocument extends BaseDocument {
    *
    * @return mixed
    */
-  public function getModules() {
+  /*public function getModules() {
     return (!empty($this->modules)) ? $this->modules : array();
-  }
+  }*/
 
   /**
    * Set the current modules for the site.
@@ -206,7 +212,7 @@ class SiteDocument extends BaseDocument {
    *   If true, update the site module versions while using the existing version
    *   information.
    */
-  public function setModules($modules, $update = FALSE) {
+  /*public function setModules($modules, $update = FALSE) {
     $currentModules = ($update) ? $this->getModules() : array();
     if (!empty($currentModules)) {
       $currentVersions = array();
@@ -224,7 +230,7 @@ class SiteDocument extends BaseDocument {
           'current' => $version['version'],
           'latest' => '',
           'isSecurity' => 0,
-        ),*/
+        ),*
       );
 
       // Set the current version if there was one.
@@ -241,7 +247,7 @@ class SiteDocument extends BaseDocument {
     }
     ksort($moduleList);
     $this->modules = $moduleList;
-  }
+  }*/
 
   /**
    * Gets a modules latest version for the site.
@@ -251,9 +257,9 @@ class SiteDocument extends BaseDocument {
    *
    * @return string
    */
-  public function getModuleLatestVersion($module) {
+  /*public function getModuleLatestVersion($module) {
     return (!isset($module['latestVersion'])) ? '' : $module['latestVersion'];
-  }
+  }*/
 
   /**
    * Returns if the provided module has a security release.
@@ -263,12 +269,12 @@ class SiteDocument extends BaseDocument {
    *
    * @return boolean
    */
-  public function getModuleIsSecurity($module) {
+  /*public function getModuleIsSecurity($module) {
     if ($this->getModuleIsDevRelease($module)) {
       return FALSE;
     }
     return (!isset($module['isSecurity'])) ? FALSE : $module['isSecurity'];
-  }
+  }*/
 
   /**
    * Determines if the module version is a dev release or not.
@@ -278,9 +284,9 @@ class SiteDocument extends BaseDocument {
    *
    * @return bool
    */
-  public function getModuleIsDevRelease($module) {
+  /*public function getModuleIsDevRelease($module) {
     return ModuleDocument::isDevRelease($module['version']);
-  }
+  }*/
 
   /**
    * Sets the latest versions of each of the modules for the site.
@@ -288,7 +294,7 @@ class SiteDocument extends BaseDocument {
    *
    * @param $moduleLatestVersions
    */
-  public function setModulesLatestVersion($moduleLatestVersions) {
+  /*public function setModulesLatestVersion($moduleLatestVersions) {
     $siteModuleList = $this->getModules();
     foreach ($siteModuleList as $key => $module) {
       if (!isset($moduleLatestVersions[$module['name']])) {
@@ -311,12 +317,12 @@ class SiteDocument extends BaseDocument {
       /*$siteModuleList[$key] += array(
         'latestVersion' => $moduleVersions[$versionType]['version'],
         'isSecurity' => $moduleVersions[$versionType]['isSecurity'],
-      );*/
+      );*
       $siteModuleList[$key]['latestVersion'] = $moduleVersions[$versionType]['version'];
       $siteModuleList[$key]['isSecurity'] = $moduleVersions[$versionType]['isSecurity'];
     }
     $this->modules = $siteModuleList;
-  }
+  }*/
 
   /**
    * Updates a specific module on a site with version and/or security info.
@@ -327,7 +333,7 @@ class SiteDocument extends BaseDocument {
    * @param array $moduleData
    *   An array of the module data, keyed with version and isSecurity.
    */
-  public function updateModule($moduleName, $moduleData) {
+  /*public function updateModule($moduleName, $moduleData) {
     $siteModuleList = $this->getModules();
     foreach ($siteModuleList as $key => $module) {
       if ($moduleName != $module['name']) {
@@ -342,7 +348,7 @@ class SiteDocument extends BaseDocument {
       }
     }
     $this->modules = $siteModuleList;
-  }
+  }*/
 
   /**
    * Updates the modules list for the provided site.
@@ -354,9 +360,9 @@ class SiteDocument extends BaseDocument {
    *
    * @throws DocumentNotFoundException
    */
-  public function updateModules(\Deeson\WardenDrupalBundle\Managers\ModuleManager $moduleManager) {
+  /*public function updateModules(\Deeson\WardenDrupalBundle\Managers\ModuleManager $moduleManager) {
     foreach ($this->getModules() as $siteModule) {
-      /** @var ModuleDocument $module */
+      /** @var ModuleDocument $module *
       $module = $moduleManager->findByProjectName($siteModule['name']);
       if (empty($module)) {
         print "Error getting module [{$siteModule['name']}]\n";
@@ -383,7 +389,7 @@ class SiteDocument extends BaseDocument {
       }
       $moduleManager->updateDocument();
     }
-  }
+  }*/
 
   /**
    * @return mixed
@@ -405,7 +411,7 @@ class SiteDocument extends BaseDocument {
    *
    * @return array
    */
-  public function getModulesRequiringUpdates() {
+  /*public function getModulesRequiringUpdates() {
     $siteModuleList = $this->getModules();
     $modulesList = array();
     foreach ($siteModuleList as $module) {
@@ -437,7 +443,7 @@ class SiteDocument extends BaseDocument {
     ksort($modulesForUpdating);
 
     return $modulesForUpdating;
-  }
+  }*/
 
   /**
    * @return mixed

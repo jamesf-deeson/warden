@@ -1,7 +1,8 @@
 <?php
 
-namespace Deeson\WardenBundle\Document;
+namespace Deeson\WardenDrupalBundle\Document;
 
+use Deeson\WardenBundle\Document\BaseDocument;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as MongoDB;
 
 /**
@@ -40,7 +41,6 @@ class ModuleDocument extends BaseDocument {
   protected $latestVersion;
 
   /**
-   * @var string
    * @MongoDB\Collection
    */
   protected $sites;

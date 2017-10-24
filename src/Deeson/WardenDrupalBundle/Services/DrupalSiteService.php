@@ -4,7 +4,7 @@ namespace Deeson\WardenDrupalBundle\Services;
 
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Event\CronEvent;
-use Deeson\WardenBundle\Document\ModuleDocument;
+use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Event\DashboardUpdateEvent;
 use Deeson\WardenBundle\Event\SiteDeleteEvent;
 use Deeson\WardenBundle\Event\SiteRefreshEvent;
@@ -211,7 +211,25 @@ class DrupalSiteService {
    * @param SiteDeleteEvent $event
    */
   public function onWardenSiteDelete(SiteDeleteEvent $event) {
-    // @todo handle the removal of a site
+    $site = $event->getSite();
+    if (!$this->isDrupalSite($site)) {
+      return;
+    }
+
+    // @todo do we need to do this anymore as the module data gets rebuilt?
+    /** @var ModuleManager $moduleManager */
+    $moduleManager = $this->get('warden.drupal.module_manager');
+
+    foreach ($site->getModules() as $siteModule) {
+      /** @var ModuleDocument $module */
+      $module = $moduleManager->findByProjectName($siteModule['name']);
+      if (empty($module)) {
+        print('Error getting module [' . $siteModule['name'] . ']');
+        continue;
+      }
+      $module->removeSite($site->getId());
+      $moduleManager->updateDocument();
+    }
   }
 
   /**

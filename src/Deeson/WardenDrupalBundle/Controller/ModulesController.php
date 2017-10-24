@@ -2,11 +2,11 @@
 
 namespace Deeson\WardenDrupalBundle\Controller;
 
-use Deeson\WardenBundle\Document\ModuleDocument;
+use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Managers\SiteManager;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Deeson\WardenBundle\Managers\ModuleManager;
+use Deeson\WardenDrupalBundle\Managers\ModuleManager;
 
 class ModulesController extends Controller {
 
@@ -44,7 +44,7 @@ class ModulesController extends Controller {
       'modules' => $modules,
     );
 
-    return $this->render('DeesonWardenBundle:Modules:index.html.twig', $params);
+    return $this->render('DeesonWardenDrupalBundle:Modules:index.html.twig', $params);
   }
 
   /**
@@ -91,7 +91,7 @@ class ModulesController extends Controller {
       'sitesNotUsingModule' => $sitesNotUsingModule,
     );
 
-    return $this->render('DeesonWardenBundle:Modules:show.html.twig', $params);
+    return $this->render('DeesonWardenDrupalBundle:Modules:show.html.twig', $params);
   }
 
 }
