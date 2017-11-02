@@ -14,6 +14,8 @@ use Deeson\WardenBundle\Event\WardenEvents;
 use Deeson\WardenBundle\Exception\WardenRequestException;
 use Deeson\WardenBundle\Services\SiteConnectionService;
 use Deeson\WardenDrupalBundle\Managers\ModuleManager;
+use Deeson\WardenDrupalBundle\Managers\SiteModuleManager;
+use Deeson\WardenDrupalBundle\Document\SiteModuleDocument;
 use Symfony\Bridge\Monolog\Logger;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -22,7 +24,12 @@ class DrupalSiteService {
   /**
    * @var ModuleManager
    */
-  protected $drupalModuleManager;
+  protected $moduleManager;
+
+  /**
+   * @var SiteModuleManager
+   */
+  protected $siteModuleManager;
 
   /**
    * @var SiteConnectionService
@@ -40,13 +47,15 @@ class DrupalSiteService {
   protected $dispatcher;
 
   /**
-   * @param ModuleManager $drupalModuleManager
+   * @param ModuleManager $moduleManager
+   * @param SiteModuleManager $siteModuleManager
    * @param SiteConnectionService $siteConnectionService
    * @param Logger $logger
    * @param EventDispatcherInterface $dispatcher
    */
-  public function __construct(ModuleManager $drupalModuleManager, SiteConnectionService $siteConnectionService, Logger $logger, EventDispatcherInterface $dispatcher) {
-    $this->drupalModuleManager = $drupalModuleManager;
+  public function __construct(ModuleManager $moduleManager, SiteModuleManager $siteModuleManager, SiteConnectionService $siteConnectionService, Logger $logger, EventDispatcherInterface $dispatcher) {
+    $this->moduleManager = $moduleManager;
+    $this->siteModuleManager = $siteModuleManager;
     $this->siteConnectionService = $siteConnectionService;
     $this->logger = $logger;
     $this->dispatcher = $dispatcher;
@@ -88,10 +97,17 @@ class DrupalSiteService {
     if (!is_array($moduleData)) {
       $moduleData = array();
     }
-    $this->drupalModuleManager->addModules($moduleData);
+    $this->moduleManager->addModules($moduleData);
     $site->setName($data->site_name);
     $site->setCoreVersion($data->core->drupal->version);
-    $site->setModules($moduleData, TRUE);
+
+    /** @var SiteModuleDocument $siteModule */
+    $siteModule = $this->siteModuleManager->findBySiteId($site->getId());
+    if (empty($siteModule)) {
+      $siteModule = $this->siteModuleManager->makeNewItem();
+    }
+    $siteModule->setModules($moduleData, TRUE);
+    $this->siteModuleManager->updateDocument();
 
     $event = new DashboardUpdateEvent($site);
     $this->dispatcher->dispatch(WardenEvents::WARDEN_DASHBOARD_UPDATE, $event);
@@ -190,15 +206,20 @@ class DrupalSiteService {
     $event->addParam('latestCoreVersion', $site->getLatestCoreVersion());
 
     // Check if there are any Drupal modules that require updates.
-    $modulesRequiringUpdates = $site->getModulesRequiringUpdates();
-    if (!empty($modulesRequiringUpdates)) {
-      $event->addTabTemplate('modules', 'DeesonWardenDrupalBundle:Sites:moduleUpdates.html.twig');
-      $event->addParam('modulesRequiringUpdates', $modulesRequiringUpdates);
-    }
+    /** @var SiteModuleDocument $siteModule */
+    $siteModule = $this->siteModuleManager->findBySiteId($site->getId());
+    if (!empty($siteModule)) {
+      $modulesRequiringUpdates = $siteModule->getModulesRequiringUpdates();
+      $event->addParam('siteModule', $siteModule);
+      if (!empty($modulesRequiringUpdates)) {
+        $event->addTabTemplate('modules', 'DeesonWardenDrupalBundle:Sites:moduleUpdates.html.twig');
+        $event->addParam('modulesRequiringUpdates', $modulesRequiringUpdates);
+      }
 
-    // List the Drupal modules that used on the site.
-    $event->addTabTemplate('modules', 'DeesonWardenDrupalBundle:Sites:modules.html.twig');
-    $event->addParam('modules', $site->getModules());
+      // List the Drupal modules that used on the site.
+      $event->addTabTemplate('modules', 'DeesonWardenDrupalBundle:Sites:modules.html.twig');
+      $event->addParam('modules', $siteModule->getModules());
+    }
 
     $this->logger->addInfo('This is the end of a Drupal show site event: ' . $site->getUrl());
   }
@@ -217,18 +238,18 @@ class DrupalSiteService {
     }
 
     // @todo do we need to do this anymore as the module data gets rebuilt?
-    /** @var ModuleManager $moduleManager */
-    $moduleManager = $this->get('warden.drupal.module_manager');
 
-    foreach ($site->getModules() as $siteModule) {
+    /** @var SiteModuleDocument $siteModule */
+    $siteModule = $this->siteModuleManager->findBySiteId($site->getId());
+    foreach ($siteModule->getModules() as $siteModule) {
       /** @var ModuleDocument $module */
-      $module = $moduleManager->findByProjectName($siteModule['name']);
+      $module = $this->moduleManager->findByProjectName($siteModule['name']);
       if (empty($module)) {
         print('Error getting module [' . $siteModule['name'] . ']');
         continue;
       }
       $module->removeSite($site->getId());
-      $moduleManager->updateDocument();
+      $this->moduleManager->updateDocument();
     }
   }
 

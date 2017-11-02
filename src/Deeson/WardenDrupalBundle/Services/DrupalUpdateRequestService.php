@@ -8,6 +8,8 @@ use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Managers\SiteManager;
 use Deeson\WardenDrupalBundle\Managers\ModuleManager;
+use Deeson\WardenDrupalBundle\Managers\SiteModuleManager;
+use Deeson\WardenDrupalBundle\Document\SiteModuleDocument;
 use Monolog\Logger;
 
 class DrupalUpdateRequestService {
@@ -44,7 +46,7 @@ class DrupalUpdateRequestService {
   /**
    * @var ModuleManager
    */
-  protected $drupalModuleManager;
+  protected $moduleManager;
 
   /**
    * @var Logger
@@ -60,6 +62,11 @@ class DrupalUpdateRequestService {
    * @var SiteManager
    */
   protected $siteManager;
+
+  /**
+   * @var SiteModuleManager
+   */
+  protected $siteModuleManager;
 
   /**
    * @var array
@@ -79,14 +86,16 @@ class DrupalUpdateRequestService {
   /**
    * @param RequestHandlerInterface $client
    * @param SiteManager $siteManager
-   * @param ModuleManager $drupalModuleManager
+   * @param ModuleManager $moduleManager
+   * @param SiteModuleManager $siteModuleManager
    * @param Logger $logger
    */
-  public function __construct(RequestHandlerInterface $client, SiteManager $siteManager, ModuleManager $drupalModuleManager, Logger $logger) {
-    $this->drupalModuleManager = $drupalModuleManager;
+  public function __construct(RequestHandlerInterface $client, SiteManager $siteManager, ModuleManager $moduleManager, SiteModuleManager $siteModuleManager, Logger $logger) {
     $this->client = $client;
-    $this->logger = $logger;
     $this->siteManager = $siteManager;
+    $this->moduleManager = $moduleManager;
+    $this->siteModuleManager = $siteModuleManager;
+    $this->logger = $logger;
   }
 
   /**
@@ -269,7 +278,7 @@ class DrupalUpdateRequestService {
    */
   protected function updateContribModules() {
     foreach ($this->majorVersions as $version) {
-      $modules = $this->drupalModuleManager->getAllByVersion($version);
+      $modules = $this->moduleManager->getAllByVersion($version);
 
       /** @var ModuleDocument $module */
       foreach ($modules as $module) {
@@ -302,7 +311,7 @@ class DrupalUpdateRequestService {
         $module->setIsNew(FALSE);
         $module->setLatestVersion($version, $moduleVersions);
         $module->setProjectStatus($this->projectStatus);
-        $this->drupalModuleManager->updateDocument();
+        $this->moduleManager->updateDocument();
       }
     }
   }
@@ -375,13 +384,21 @@ class DrupalUpdateRequestService {
         continue;
       }
 
-      if (isset($this->moduleLatestVersion[$version])) {
-        $site->setModulesLatestVersion($this->moduleLatestVersion[$version]);
+      /** @var SiteModuleDocument $siteModule */
+      $siteModule = $this->siteModuleManager->findBySiteId($site->getId());
+      if (empty($siteModule)) {
+        // @todo should we do this or just have a null object/ not update the modules?
+        $siteModule = $this->siteModuleManager->makeNewItem();
+        $siteModule->setSiteId($site->getId());
       }
+      if (isset($this->moduleLatestVersion[$version])) {
+        $siteModule->setModulesLatestVersion($this->moduleLatestVersion[$version]);
+      }
+      $this->siteModuleManager->saveDocument($siteModule);
 
       // Check for if the core version is out of date and requires a security update.
       $coreNeedsSecurityUpdate = $this->siteHasCoreSecurityUpdate($coreVersions, $site->getCoreVersion());
-      $hasCriticalIssue = $this->updateSiteModules($version, $site);
+      $hasCriticalIssue = $this->updateSiteModules($version, $siteModule);
       if ($coreNeedsSecurityUpdate) {
         $hasCriticalIssue = TRUE;
       }
@@ -397,26 +414,26 @@ class DrupalUpdateRequestService {
    * Updates the module data for each site.
    *
    * @param string $version
-   * @param SiteDocument $site
+   * @param SiteModuleDocument $siteModule
    *
    * @return bool
    */
-  protected function updateSiteModules($version, SiteDocument $site) {
+  protected function updateSiteModules($version, SiteModuleDocument $siteModule) {
     // Check all the site modules to see if any of them are out of date and need a security update.
     $siteHasSecurityIssues = FALSE;
-    foreach ($site->getModules() as $siteModule) {
-      if (!isset($siteModule['latestVersion'])) {
+    foreach ($siteModule->getModules() as $module) {
+      if (!isset($module['latestVersion'])) {
         continue;
       }
-      if (is_null($siteModule['version'])) {
+      if (is_null($module['version'])) {
         continue;
       }
-      if (ModuleDocument::isLatestVersion($siteModule)) {
+      if (ModuleDocument::isLatestVersion($module)) {
         continue;
       }
 
       // Check to see if this site's modules require a security update.
-      $hasSecurityIssue = $this->moduleHasSecurityUpdate($siteModule, $version, $site);
+      $hasSecurityIssue = $this->moduleHasSecurityUpdate($module, $version, $siteModule);
       if ($hasSecurityIssue) {
         $siteHasSecurityIssues = TRUE;
       }
@@ -455,16 +472,17 @@ class DrupalUpdateRequestService {
    *
    * @param array $module
    * @param string $version
-   * @param SiteDocument $site
+   * @param SiteModuleDocument $siteModule
    *   The SiteDocument object to be updated.
    *
    * @return bool
    */
-  protected function moduleHasSecurityUpdate($module, $version, SiteDocument $site) {
+  protected function moduleHasSecurityUpdate($module, $version, SiteModuleDocument &$siteModule) {
     // If a site module is a dev version, then force it to have no security update.
     if (ModuleDocument::isDevRelease($module['version'])) {
       $drupalModule['isSecurity'] = FALSE;
-      $site->updateModule($module['name'], $drupalModule);
+      $siteModule->updateModule($module['name'], $drupalModule);
+      $this->siteModuleManager->saveDocument($siteModule);
       return FALSE;
     }
 
@@ -494,7 +512,8 @@ class DrupalUpdateRequestService {
 
         if ($drupalModule['isSecurity']) {
           unset($drupalModule['version']);
-          $site->updateModule($module['name'], $drupalModule);
+          $siteModule->updateModule($module['name'], $drupalModule);
+          $this->siteModuleManager->saveDocument($siteModule);
           $hasSecurityRelease = TRUE;
         }
       }

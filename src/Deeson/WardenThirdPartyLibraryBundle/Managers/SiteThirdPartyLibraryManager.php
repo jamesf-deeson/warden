@@ -3,20 +3,9 @@
 namespace Deeson\WardenThirdPartyLibraryBundle\Managers;
 
 use Deeson\WardenBundle\Managers\BaseManager;
-use Deeson\WardenBundle\Managers\SiteManager;
 use Deeson\WardenThirdPartyLibraryBundle\Document\SiteThirdPartyLibraryDocument;
-use Monolog\Logger;
 
 class SiteThirdPartyLibraryManager extends BaseManager {
-
-  /**
-   * @var SiteManager
-   */
-  protected $siteManager;
-
-  public function __construct($doctrine, Logger $logger) {
-    parent::__construct($doctrine, $logger);
-  }
 
   /**
    * @return string

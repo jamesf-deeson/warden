@@ -5,7 +5,9 @@ namespace Deeson\WardenDrupalBundle\Services;
 use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Managers\SiteManager;
+use Deeson\WardenDrupalBundle\Document\SiteModuleDocument;
 use Deeson\WardenDrupalBundle\Managers\ModuleManager;
+use Deeson\WardenDrupalBundle\Managers\SiteModuleManager;
 use Monolog\Logger;
 
 class DrupalModuleService {
@@ -13,7 +15,7 @@ class DrupalModuleService {
   /**
    * @var ModuleManager
    */
-  protected $drupalModuleManager;
+  protected $moduleManager;
 
   /**
    * @var Logger
@@ -26,13 +28,20 @@ class DrupalModuleService {
   protected $siteManager;
 
   /**
-   * @param ModuleManager $drupalModuleManager
+   * @var SiteModuleManager
+   */
+  protected $siteModuleManager;
+
+  /**
+   * @param ModuleManager $moduleManager
    * @param SiteManager $siteManager
+   * @param SiteModuleManager $siteModuleManager
    * @param Logger $logger
    */
-  public function __construct(ModuleManager $drupalModuleManager, SiteManager $siteManager, Logger $logger) {
-    $this->drupalModuleManager = $drupalModuleManager;
+  public function __construct(ModuleManager $moduleManager, SiteManager $siteManager, SiteModuleManager $siteModuleManager, Logger $logger) {
+    $this->moduleManager = $moduleManager;
     $this->siteManager = $siteManager;
+    $this->siteModuleManager = $siteModuleManager;
     $this->logger = $logger;
   }
 
@@ -58,11 +67,11 @@ class DrupalModuleService {
    * Removes all the sites referenced by all of the modules.
    */
   private function removeAllModuleSites() {
-    $modules = $this->drupalModuleManager->getAllDocuments();
+    $modules = $this->moduleManager->getAllDocuments();
     foreach ($modules as $module) {
       /** @var ModuleDocument $module */
       $module->setSites(array());
-      $this->drupalModuleManager->updateDocument();
+      $this->moduleManager->updateDocument();
     }
   }
 
@@ -73,8 +82,16 @@ class DrupalModuleService {
     $sites = $this->siteManager->getAllDocuments();
     foreach ($sites as $site) {
       /** @var SiteDocument $site */
-      print 'Updating site: ' . $site->getId() . ' - ' . $site->getUrl() . "\n";
-      $site->updateModules($this->drupalModuleManager);
+      print 'Updating site modules: ' . $site->getId() . ' - ' . $site->getUrl() . "\n";
+      /** @var SiteModuleDocument $siteModule */
+      $siteModule = $this->siteModuleManager->findBySiteId($site->getId());
+      if (empty($siteModule)) {
+        continue;
+        /*$siteModule = $this->siteModuleManager->makeNewItem();
+        $siteModule->setSiteId($site->getId());*/
+      }
+      $siteModule->updateModules($this->moduleManager, $site);
+      $this->siteModuleManager->saveDocument($siteModule);
     }
   }
 

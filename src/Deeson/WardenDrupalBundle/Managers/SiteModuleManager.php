@@ -29,6 +29,6 @@ class SiteModuleManager extends DrupalBaseManager {
    * @return null|object
    */
   public function findBySiteId($site) {
-    return $this->getRepository()->findOneBy(array('siteId' => $site));
+    return $this->getRepository()->findOneBy(array('siteId' => new \MongoId($site)));
   }
 }

@@ -3,9 +3,10 @@
 namespace Deeson\WardenDrupalBundle\Document;
 
 use Deeson\WardenBundle\Document\BaseDocument;
+use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Exception\DocumentNotFoundException;
+use Deeson\WardenDrupalBundle\Managers\ModuleManager;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as MongoDB;
-use Deeson\WardenDrupalBundle\Managers\SiteModuleManager;
 
 /**
  * @MongoDB\Document(
@@ -15,7 +16,7 @@ use Deeson\WardenDrupalBundle\Managers\SiteModuleManager;
 class SiteModuleDocument extends BaseDocument {
 
   /**
-   * @Mongodb\Field(type="string")
+   * @Mongodb\ObjectId
    */
   protected $siteId;
 
@@ -32,10 +33,10 @@ class SiteModuleDocument extends BaseDocument {
   }
 
   /**
-   * @param mixed $site
+   * @param mixed $siteId
    */
-  public function setSiteId($site) {
-    $this->siteId = $site;
+  public function setSiteId($siteId) {
+    $this->siteId = $siteId;
   }
 
   /**
@@ -194,14 +195,15 @@ class SiteModuleDocument extends BaseDocument {
    *
    * This updates the list of modules that this site has with the module documents.
    *
-   * @param SiteModuleManager $siteModuleManager
+   * @param ModuleManager $moduleManager
+   * @param SiteDocument $site
    *
    * @throws DocumentNotFoundException
    */
-  public function updateModules(SiteModuleManager $siteModuleManager) {
+  public function updateModules(ModuleManager $moduleManager, SiteDocument $site) {
     foreach ($this->getModules() as $siteModule) {
       /** @var ModuleDocument $module */
-      $module = $siteModuleManager->findByProjectName($siteModule['name']);
+      $module = $moduleManager->findByProjectName($siteModule['name']);
       if (empty($module)) {
         print "Error getting module [{$siteModule['name']}]\n";
         continue;
@@ -212,7 +214,7 @@ class SiteModuleDocument extends BaseDocument {
       $alreadyExists = FALSE;
       if (is_array($moduleSites)) {
         foreach ($moduleSites as $moduleSite) {
-          if ($moduleSite['id'] == $this->getId()) {
+          if ($moduleSite['id'] == $site->getId()) {
             $alreadyExists = TRUE;
             break;
           }
@@ -220,12 +222,12 @@ class SiteModuleDocument extends BaseDocument {
       }
 
       if ($alreadyExists) {
-        $module->updateSite($this->getId(), $siteModule['version']);
+        $module->updateSite($site->getId(), $siteModule['version']);
       }
       else {
-        $module->addSite($this->getId(), $this->getName(), $this->getUrl(), $siteModule['version']);
+        $module->addSite($site->getId(), $site->getName(), $site->getUrl(), $siteModule['version']);
       }
-      $siteModuleManager->updateDocument();
+      $moduleManager->updateDocument();
     }
   }
 

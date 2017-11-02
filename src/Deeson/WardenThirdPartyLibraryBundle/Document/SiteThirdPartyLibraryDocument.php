@@ -7,7 +7,7 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as MongoDB;
 
 /**
  * @MongoDB\Document(
- *     collection="siteThirdPartyLibrary"
+ *     collection="sites_thirdpartylibrary"
  * )
  */
 class SiteThirdPartyLibraryDocument extends BaseDocument {
@@ -30,10 +30,10 @@ class SiteThirdPartyLibraryDocument extends BaseDocument {
   }
 
   /**
-   * @param mixed $site
+   * @param string $siteId
    */
-  public function setSiteId($site) {
-    $this->siteId = $site;
+  public function setSiteId($siteId) {
+    $this->siteId = $siteId;
   }
 
   /**

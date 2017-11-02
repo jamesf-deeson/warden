@@ -13,7 +13,7 @@
             </thead>
             <tbody>
             {% for module in modules %}
-                <tr {% if site.getModuleIsDevRelease(module) %}class="alert-info"{% endif %}>
+                <tr {% if siteModule.getModuleIsDevRelease(module) %}class="alert-info"{% endif %}>
                     <td>
                         {% if (module.version) %}
                         <a href="{{ path('modules_show', {'projectName': module.name }) }}">

@@ -3,7 +3,6 @@
 namespace Deeson\WardenBundle\Managers;
 
 use Deeson\WardenBundle\Document\DashboardDocument;
-use Deeson\WardenBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Event\DashboardUpdateEvent;
 use Deeson\WardenBundle\Event\SiteRefreshEvent;
@@ -132,7 +131,8 @@ class DashboardManager extends BaseManager {
   public function addSiteToDashboard(SiteDocument $site) {
     $hasCriticalIssue = $site->getHasCriticalIssue();
     $modulesNeedUpdate = array();
-    foreach ($site->getModules() as $siteModule) {
+    // @todo add event for this?
+    /*foreach ($site->getModules() as $siteModule) {
       if (!isset($siteModule['latestVersion'])) {
         continue;
       }
@@ -148,7 +148,7 @@ class DashboardManager extends BaseManager {
       }
 
       $modulesNeedUpdate[] = $siteModule;
-    }
+    }*/
 
     // Don't add the site to the dashboard if there are no critical issues.
     if (!$hasCriticalIssue) {
