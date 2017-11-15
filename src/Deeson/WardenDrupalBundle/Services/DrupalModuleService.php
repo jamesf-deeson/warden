@@ -99,7 +99,7 @@ class DrupalModuleService {
    * Removes modules that have no sites associated to them.
    */
   protected function removeUnusedModules() {
-    $modules = $this->drupalModuleManager->getUnusedModules();
+    $modules = $this->moduleManager->getUnusedModules();
     if (empty($modules)) {
       return;
     }
@@ -108,7 +108,7 @@ class DrupalModuleService {
       /** @var ModuleDocument $module */
       $this->logger->addInfo('Remove module "' . $module->getName() . '" as it has no sites associated to it.');
       print "Remove module \"" . $module->getName() . "\" as it has no sites associated to it.\n";
-      $this->drupalModuleManager->deleteDocument($module->getId());
+      $this->moduleManager->deleteDocument($module->getId());
     }
   }
 
