@@ -14,7 +14,7 @@
             <tbody>
             {% for module in modulesRequiringUpdates %}
                 <tr class="{% if siteModule.getModuleIsSecurity(module) %}alert alert-danger{% else %}{% if siteModule.getModuleIsDevRelease(module) %}alert-info{% else %}{% if module.version != siteModule.getModuleLatestVersion(module) %}alert alert-warning{% endif %}{% endif %}{% endif %}">
-                    <td><a href="{{ path('modules_show', {'projectName': module.name }) }}">{{ module.name }}</a> {% if site.isModuleSupported(module) %}<span class="fa fa-warning"></span>&nbsp;Obsolete/ Unsupported{% endif %}</td>
+                    <td><a href="{{ path('modules_show', {'projectName': module.name }) }}">{{ module.name }}</a> {% if siteModule.isModuleSupported(module) %}<span class="fa fa-warning"></span>&nbsp;Obsolete/ Unsupported{% endif %}</td>
                     <td>{{ module.version }}</td>
                     <td>{{ siteModule.getModuleLatestVersion(module) }}</td>
                 </tr>

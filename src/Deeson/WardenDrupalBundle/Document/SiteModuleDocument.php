@@ -88,6 +88,10 @@ class SiteModuleDocument extends BaseDocument {
         }
       }
 
+      $drupalVersion = ModuleDocument::getMajorVersion($module['version']);
+      $moduleVersions = $version['latestVersion'][$drupalVersion];
+
+      $module['isUnsupported'] = ModuleDocument::isVersionUnsupported($moduleVersions, $module);
       $moduleList[$name] = $module;
     }
     ksort($moduleList);
@@ -103,6 +107,17 @@ class SiteModuleDocument extends BaseDocument {
    */
   public function getModuleLatestVersion($module) {
     return (!isset($module['latestVersion'])) ? '' : $module['latestVersion'];
+  }
+
+  /**
+   * Returns if the provided module is an unsupported release.
+   *
+   * @param array $module
+   *
+   * @return boolean
+   */
+  public function isModuleSupported($module) {
+    return (!isset($module['isUnsupported'])) ? FALSE : $module['isUnsupported'];
   }
 
   /**
@@ -151,16 +166,19 @@ class SiteModuleDocument extends BaseDocument {
         }
       }
 
+      $siteModuleList[$key]['isUnsupported'] = ModuleDocument::isVersionUnsupported($moduleVersions, $module);
+
       if (!isset($moduleVersions[$versionType])) {
         print "ERROR : module (" . $module['name'] .") version is not valid: " . print_r(array($versionType, $moduleVersions), TRUE);
-        continue;
       }
-      /*$siteModuleList[$key] += array(
-        'latestVersion' => $moduleVersions[$versionType]['version'],
-        'isSecurity' => $moduleVersions[$versionType]['isSecurity'],
-      );*/
-      $siteModuleList[$key]['latestVersion'] = $moduleVersions[$versionType]['version'];
-      $siteModuleList[$key]['isSecurity'] = $moduleVersions[$versionType]['isSecurity'];
+      else {
+        /*$siteModuleList[$key] += array(
+          'latestVersion' => $moduleVersions[$versionType]['version'],
+          'isSecurity' => $moduleVersions[$versionType]['isSecurity'],
+        );*/
+        $siteModuleList[$key]['latestVersion'] = $moduleVersions[$versionType]['version'];
+        $siteModuleList[$key]['isSecurity'] = $moduleVersions[$versionType]['isSecurity'];
+      }
     }
     $this->modules = $siteModuleList;
   }

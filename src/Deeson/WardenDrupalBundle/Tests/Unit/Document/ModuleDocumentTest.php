@@ -1,8 +1,8 @@
 <?php
 
-namespace Deeson\WardenBundle\Test\Unit\Document;
+namespace Deeson\WardenDrupalBundle\Test\Unit\Document;
 
-use Deeson\WardenBundle\Document\ModuleDocument;
+use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 
 class ModuleDocumentTest extends \PHPUnit_Framework_TestCase {
 
