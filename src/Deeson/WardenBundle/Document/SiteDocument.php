@@ -43,6 +43,16 @@ class SiteDocument extends BaseDocument {
   protected $wardenEncryptToken;
 
   /**
+   * @Mongodb\Collection
+   */
+  protected $modules;
+
+  /**
+   * @Mongodb\Hash
+   */
+  protected $libraries;
+
+  /**
    * @Mongodb\Field(type="string")
    */
   protected $authUser;
@@ -184,6 +194,254 @@ class SiteDocument extends BaseDocument {
    */
   public function getIsSecurityCoreVersion() {
     return (empty($this->coreVersion['isSecurity'])) ? FALSE : $this->coreVersion['isSecurity'];
+  }
+
+  /**
+   * Get the site modules.
+   * @todo move this into the DrupalSiteService
+   *
+   * @return mixed
+   */
+  public function getModules() {
+    return (!empty($this->modules)) ? $this->modules : array();
+  }
+
+  /**
+   * Set the current modules for the site.
+   *
+   * @param array $modules
+   *   List of modules to add to the site.
+   * @param bool $update
+   *   If true, update the site module versions while using the existing version
+   *   information.
+   */
+  public function setModules($modules, $update = FALSE) {
+    $currentModules = ($update) ? $this->getModules() : array();
+    if (!empty($currentModules)) {
+      $currentVersions = array();
+      foreach ($currentModules as $value) {
+        $currentVersions[$value['name']] = $value;
+      }
+    }
+
+    $moduleList = array();
+    foreach ($modules as $name => $version) {
+      $module = array(
+        'name' => $name,
+        'version' => $version['version'],
+        /*'version' => array(
+          'current' => $version['version'],
+          'latest' => '',
+          'isSecurity' => 0,
+        ),*/
+      );
+
+      // Set the current version if there was one.
+      if (isset($currentVersions[$name])) {
+        if (isset($currentVersions[$name]['latestVersion'])) {
+          $module['latestVersion'] = $currentVersions[$name]['latestVersion'];
+        }
+        if (isset($currentVersions[$name]['isSecurity'])) {
+          $module['isSecurity'] = $currentVersions[$name]['isSecurity'];
+        }
+      }
+
+      $drupalVersion = ModuleDocument::getMajorVersion($module['version']);
+      $moduleVersions = $version['latestVersion'][$drupalVersion];
+
+      $module['isUnsupported'] = ModuleDocument::isVersionUnsupported($moduleVersions, $module);
+      $moduleList[$name] = $module;
+    }
+    ksort($moduleList);
+    $this->modules = $moduleList;
+  }
+
+  /**
+   * Get the site third party libraries.
+   * @todo move this into the DrupalSiteService
+   *
+   * @return mixed
+   */
+  public function getLibraries() {
+    return (!empty($this->libraries)) ? $this->libraries : array();
+  }
+
+  /**
+   * Set the current third party libraries for the site.
+   * @todo move this into the DrupalSiteService
+   *
+   * @param array $libraryData
+   *   List of third party library data to add to the site.
+   */
+  public function setLibraries($libraryData) {
+    $libraryList = array();
+    foreach ($libraryData as $type => $typeData) {
+      foreach ($typeData as $name => $version) {
+        $libraryList[$type][] = array(
+          'name' => $name,
+          'version' => $version,
+        );
+      }
+      ksort($libraryList[$type]);
+    }
+    ksort($libraryList);
+    $this->libraries = $libraryList;
+  }
+
+  /**
+   * Gets a modules latest version for the site.
+   * @todo move this into the DrupalSiteService
+   *
+   * @param $module
+   *
+   * @return string
+   */
+  public function getModuleLatestVersion($module) {
+    return (!isset($module['latestVersion'])) ? '' : $module['latestVersion'];
+  }
+
+  /**
+   * Returns if the provided module has a security release.
+   * @todo move this into the DrupalSiteService
+   *
+   * @param array $module
+   *
+   * @return boolean
+   */
+  public function getModuleIsSecurity($module) {
+    if ($this->getModuleIsDevRelease($module)) {
+      return FALSE;
+    }
+    return (!isset($module['isSecurity'])) ? FALSE : $module['isSecurity'];
+  }
+
+  /**
+   * Returns if the provided module is an unsupported release.
+   * @todo move this into the DrupalSiteService
+   *
+   * @param array $module
+   *
+   * @return boolean
+   */
+  public function isModuleSupported($module) {
+    return (!isset($module['isUnsupported'])) ? FALSE : $module['isUnsupported'];
+  }
+
+  /**
+   * Determines if the module version is a dev release or not.
+   *
+   * @param array $module
+   *
+   * @return bool
+   */
+  public function getModuleIsDevRelease($module) {
+    return ModuleDocument::isDevRelease($module['version']);
+  }
+
+  /**
+   * Sets the latest versions of each of the modules for the site.
+   * @todo move this into the DrupalSiteService
+   *
+   * @param $moduleLatestVersions
+   */
+  public function setModulesLatestVersion($moduleLatestVersions) {
+    $siteModuleList = $this->getModules();
+    foreach ($siteModuleList as $key => $module) {
+      if (!isset($moduleLatestVersions[$module['name']])) {
+        continue;
+      }
+      $moduleVersions = $moduleLatestVersions[$module['name']];
+
+      $versionType = ModuleDocument::MODULE_VERSION_TYPE_RECOMMENDED;
+      if (isset($moduleVersions[ModuleDocument::MODULE_VERSION_TYPE_OTHER])) {
+        $latestVersion = ModuleDocument::getRelevantLatestVersion($module['version'], $moduleVersions[ModuleDocument::MODULE_VERSION_TYPE_OTHER]['version']);
+        if ($latestVersion) {
+          $versionType = ModuleDocument::MODULE_VERSION_TYPE_OTHER;
+        }
+      }
+
+      $siteModuleList[$key]['isUnsupported'] = ModuleDocument::isVersionUnsupported($moduleVersions, $module);
+
+      if (!isset($moduleVersions[$versionType])) {
+        print "ERROR : module (" . $module['name'] .") version is not valid: " . print_r(array($versionType, $moduleVersions), TRUE);
+      }
+      else {
+        /*$siteModuleList[$key] += array(
+          'latestVersion' => $moduleVersions[$versionType]['version'],
+          'isSecurity' => $moduleVersions[$versionType]['isSecurity'],
+        );*/
+        $siteModuleList[$key]['latestVersion'] = $moduleVersions[$versionType]['version'];
+        $siteModuleList[$key]['isSecurity'] = $moduleVersions[$versionType]['isSecurity'];
+      }
+    }
+    $this->modules = $siteModuleList;
+  }
+
+  /**
+   * Updates a specific module on a site with version and/or security info.
+   * @todo move this into the DrupalSiteService
+   *
+   * @param string $moduleName
+   *   The module project name.
+   * @param array $moduleData
+   *   An array of the module data, keyed with version and isSecurity.
+   */
+  public function updateModule($moduleName, $moduleData) {
+    $siteModuleList = $this->getModules();
+    foreach ($siteModuleList as $key => $module) {
+      if ($moduleName != $module['name']) {
+        continue;
+      }
+
+      if (isset($moduleData['version'])) {
+        $siteModuleList[$key]['latestVersion'] = $moduleData['version'];
+      }
+      if (isset($moduleData['isSecurity'])) {
+        $siteModuleList[$key]['isSecurity'] = $moduleData['isSecurity'];
+      }
+    }
+    $this->modules = $siteModuleList;
+  }
+
+  /**
+   * Updates the modules list for the provided site.
+   *
+   * This updates the list of modules that this site has with the module documents.
+   * @todo move this into the DrupalSiteService
+   *
+   * @param ModuleManager $moduleManager
+   *
+   * @throws DocumentNotFoundException
+   */
+  public function updateModules(ModuleManager $moduleManager) {
+    foreach ($this->getModules() as $siteModule) {
+      /** @var ModuleDocument $module */
+      $module = $moduleManager->findByProjectName($siteModule['name']);
+      if (empty($module)) {
+        print "[updateModules] Error : Unable to find module [{$siteModule['name']}]\n";
+        continue;
+      }
+      $moduleSites = $module->getSites();
+
+      // Check if the site URL is already in the list for this module.
+      $alreadyExists = FALSE;
+      if (is_array($moduleSites)) {
+        foreach ($moduleSites as $moduleSite) {
+          if ($moduleSite['id'] == $this->getId()) {
+            $alreadyExists = TRUE;
+            break;
+          }
+        }
+      }
+
+      if ($alreadyExists) {
+        $module->updateSite($this->getId(), $siteModule['version']);
+      }
+      else {
+        $module->addSite($this->getId(), $this->getName(), $this->getUrl(), $siteModule['version']);
+      }
+      $moduleManager->updateDocument();
+    }
   }
 
   /**

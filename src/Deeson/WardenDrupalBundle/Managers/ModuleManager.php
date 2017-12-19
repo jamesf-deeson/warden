@@ -79,7 +79,7 @@ class ModuleManager extends DrupalBaseManager {
    *
    * @param array $moduleData
    */
-  public function addModules(array $moduleData) {
+  public function addModules(array &$moduleData) {
     foreach ($moduleData as $name => $version) {
       $majorVersion = ModuleDocument::getMajorVersion($version['version']);
 
@@ -100,6 +100,8 @@ class ModuleManager extends DrupalBaseManager {
         $module->setLatestVersion($majorVersion);
         $this->saveDocument($module);
       }
+
+      $moduleData[$name]['latestVersion'] = $module->getLatestVersion();
     }
   }
 
