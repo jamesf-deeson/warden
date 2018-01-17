@@ -7,7 +7,9 @@ use Deeson\WardenBundle\Client\RequestHandlerInterface;
 use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Managers\SiteManager;
+use Deeson\WardenDrupalBundle\Document\SiteDrupalDocument;
 use Deeson\WardenDrupalBundle\Managers\ModuleManager;
+use Deeson\WardenDrupalBundle\Managers\SiteDrupalManager;
 use Deeson\WardenDrupalBundle\Managers\SiteModuleManager;
 use Deeson\WardenDrupalBundle\Document\SiteModuleDocument;
 use Monolog\Logger;
@@ -64,6 +66,11 @@ class DrupalUpdateRequestService {
   protected $siteManager;
 
   /**
+   * @var SiteDrupalManager
+   */
+  protected $siteDrupalManager;
+
+  /**
    * @var SiteModuleManager
    */
   protected $siteModuleManager;
@@ -87,13 +94,15 @@ class DrupalUpdateRequestService {
    * @param RequestHandlerInterface $client
    * @param SiteManager $siteManager
    * @param ModuleManager $moduleManager
+   * @param SiteDrupalManager $siteDrupalManager
    * @param SiteModuleManager $siteModuleManager
    * @param Logger $logger
    */
-  public function __construct(RequestHandlerInterface $client, SiteManager $siteManager, ModuleManager $moduleManager, SiteModuleManager $siteModuleManager, Logger $logger) {
+  public function __construct(RequestHandlerInterface $client, SiteManager $siteManager, ModuleManager $moduleManager, SiteDrupalManager $siteDrupalManager, SiteModuleManager $siteModuleManager, Logger $logger) {
     $this->client = $client;
     $this->siteManager = $siteManager;
     $this->moduleManager = $moduleManager;
+    $this->siteDrupalManager = $siteDrupalManager;
     $this->siteModuleManager = $siteModuleManager;
     $this->logger = $logger;
   }
@@ -380,16 +389,25 @@ class DrupalUpdateRequestService {
     foreach ($sites as $site) {
       $this->logger->addInfo('Updating site: ' . $site->getId() . ' for version ' . $version . ' - ' . $site->getUrl());
 
-      if ($site->getCoreReleaseVersion() != $version) {
+      /** @var SiteDrupalDocument $siteDrupal */
+      $siteDrupal = $this->siteDrupalManager->findBySiteId($site->getId());
+      /*if (empty($siteDrupal)) {
+        $siteDrupal = $this->siteDrupalManager->makeNewItem();
+        // @todo move this to the makeNewItem meethod.
+        $siteDrupal->setSiteId($site->getId());
+      }*/
+
+      if (empty($siteDrupal) || $siteDrupal->getCoreReleaseVersion() != $version) {
         continue;
       }
 
       /** @var SiteModuleDocument $siteModule */
       $siteModule = $this->siteModuleManager->findBySiteId($site->getId());
       if (empty($siteModule)) {
+        continue;
         // @todo should we do this or just have a null object/ not update the modules?
-        $siteModule = $this->siteModuleManager->makeNewItem();
-        $siteModule->setSiteId($site->getId());
+        /*$siteModule = $this->siteModuleManager->makeNewItem();
+        $siteModule->setSiteId($site->getId());*/
       }
       if (isset($this->moduleLatestVersion[$version])) {
         $siteModule->setModulesLatestVersion($this->moduleLatestVersion[$version]);
@@ -397,13 +415,15 @@ class DrupalUpdateRequestService {
       $this->siteModuleManager->saveDocument($siteModule);
 
       // Check for if the core version is out of date and requires a security update.
-      $coreNeedsSecurityUpdate = $this->siteHasCoreSecurityUpdate($coreVersions, $site->getCoreVersion());
+      $coreNeedsSecurityUpdate = $this->siteHasCoreSecurityUpdate($coreVersions, $siteDrupal->getCoreVersion());
       $hasCriticalIssue = $this->updateSiteModules($version, $siteModule);
       if ($coreNeedsSecurityUpdate) {
         $hasCriticalIssue = TRUE;
       }
 
-      $site->setLatestCoreVersion($coreVersions[0]['version'], $coreNeedsSecurityUpdate);
+      $siteDrupal->setLatestCoreVersion($coreVersions[0]['version'], $coreNeedsSecurityUpdate);
+      $this->siteDrupalManager->updateDocument();
+
       $site->setIsNew(FALSE);
       $site->setHasCriticalIssue($hasCriticalIssue);
       $this->siteManager->updateDocument();

@@ -131,24 +131,6 @@ class DashboardManager extends BaseManager {
   public function addSiteToDashboard(SiteDocument $site) {
     $hasCriticalIssue = $site->getHasCriticalIssue();
     $modulesNeedUpdate = array();
-    // @todo add event for this?
-    /*foreach ($site->getModules() as $siteModule) {
-      if (!isset($siteModule['latestVersion'])) {
-        continue;
-      }
-      if (is_null($siteModule['version'])) {
-        continue;
-      }
-      if (ModuleDocument::isLatestVersion($siteModule)) {
-        continue;
-      }
-
-      if ($siteModule['isSecurity']) {
-        $hasCriticalIssue = TRUE;
-      }
-
-      $modulesNeedUpdate[] = $siteModule;
-    }*/
 
     // Don't add the site to the dashboard if there are no critical issues.
     if (!$hasCriticalIssue) {
@@ -160,7 +142,7 @@ class DashboardManager extends BaseManager {
     $dashboard->setName($site->getName());
     $dashboard->setSiteId($site->getId());
     $dashboard->setUrl($site->getUrl());
-    $dashboard->setCoreVersion($site->getCoreVersion(), $site->getLatestCoreVersion(), $site->getIsSecurityCoreVersion());
+    //$dashboard->setCoreVersion($site->getCoreVersion(), $site->getLatestCoreVersion(), $site->getIsSecurityCoreVersion());
     $dashboard->setHasCriticalIssue($hasCriticalIssue);
     $dashboard->setAdditionalIssues($site->getAdditionalIssues());
     $dashboard->setModules($modulesNeedUpdate);

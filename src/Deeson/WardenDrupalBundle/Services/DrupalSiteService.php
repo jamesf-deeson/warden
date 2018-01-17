@@ -14,8 +14,10 @@ use Deeson\WardenBundle\Event\WardenEvents;
 use Deeson\WardenBundle\Exception\WardenRequestException;
 use Deeson\WardenBundle\Services\SiteConnectionService;
 use Deeson\WardenDrupalBundle\Managers\ModuleManager;
+use Deeson\WardenDrupalBundle\Managers\SiteDrupalManager;
 use Deeson\WardenDrupalBundle\Managers\SiteModuleManager;
 use Deeson\WardenDrupalBundle\Document\SiteModuleDocument;
+use Deeson\WardenDrupalBundle\Document\SiteDrupalDocument;
 use Symfony\Bridge\Monolog\Logger;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -25,6 +27,11 @@ class DrupalSiteService {
    * @var ModuleManager
    */
   protected $moduleManager;
+
+  /**
+   * @var SiteDrupalManager
+   */
+  protected $siteDrupalManager;
 
   /**
    * @var SiteModuleManager
@@ -48,13 +55,15 @@ class DrupalSiteService {
 
   /**
    * @param ModuleManager $moduleManager
+   * @param SiteDrupalManager $siteDrupalManager
    * @param SiteModuleManager $siteModuleManager
    * @param SiteConnectionService $siteConnectionService
    * @param Logger $logger
    * @param EventDispatcherInterface $dispatcher
    */
-  public function __construct(ModuleManager $moduleManager, SiteModuleManager $siteModuleManager, SiteConnectionService $siteConnectionService, Logger $logger, EventDispatcherInterface $dispatcher) {
+  public function __construct(ModuleManager $moduleManager, SiteDrupalManager $siteDrupalManager, SiteModuleManager $siteModuleManager, SiteConnectionService $siteConnectionService, Logger $logger, EventDispatcherInterface $dispatcher) {
     $this->moduleManager = $moduleManager;
+    $this->siteDrupalManager = $siteDrupalManager;
     $this->siteModuleManager = $siteModuleManager;
     $this->siteConnectionService = $siteConnectionService;
     $this->logger = $logger;
@@ -81,7 +90,8 @@ class DrupalSiteService {
    */
   protected function isDrupalSite(SiteDocument $site) {
     // @TODO how to determine?
-    return TRUE;
+    $siteDrupal = $this->siteDrupalManager->findBySiteId($site->getId());
+    return !empty($siteDrupal);
   }
 
   /**
@@ -99,12 +109,25 @@ class DrupalSiteService {
     }
     $this->moduleManager->addModules($moduleData);
     $site->setName($data->site_name);
-    $site->setCoreVersion($data->core->drupal->version);
+
+    /** @var SiteDrupalDocument $siteDrupal */
+    $siteDrupal = $this->siteDrupalManager->findBySiteId($site->getId());
+    if (empty($siteDrupal)) {
+      $siteDrupal = $this->siteDrupalManager->makeNewItem();
+      // @todo move this to the makeNewItem method.
+      $siteDrupal->setSiteId($site->getId());
+      $this->siteDrupalManager->saveDocument($siteDrupal);
+    }
+    $siteDrupal->setCoreVersion($data->core->drupal->version);
+    $this->siteDrupalManager->updateDocument();
 
     /** @var SiteModuleDocument $siteModule */
     $siteModule = $this->siteModuleManager->findBySiteId($site->getId());
     if (empty($siteModule)) {
       $siteModule = $this->siteModuleManager->makeNewItem();
+      // @todo move this to the makeNewItem method.
+      $siteModule->setSiteId($site->getId());
+      $this->siteModuleManager->saveDocument($siteModule);
     }
     $siteModule->setModules($moduleData, TRUE);
     $this->siteModuleManager->updateDocument();
@@ -197,13 +220,15 @@ class DrupalSiteService {
     $this->logger->addInfo('This is the start of a Drupal show site event: ' . $site->getUrl());
 
     // Check if Drupal core requires a security update.
-    if ($site->hasOlderCoreVersion() && $site->getIsSecurityCoreVersion()) {
+    /** @var SiteDrupalDocument $siteDrupal */
+    $siteDrupal = $this->siteDrupalManager->findBySiteId($site->getId());
+    if ($siteDrupal->hasOlderCoreVersion() && $siteDrupal->getIsSecurityCoreVersion()) {
       $event->addTemplate('DeesonWardenDrupalBundle:Sites:securityUpdateRequired.html.twig');
     }
 
     $event->addTemplate('DeesonWardenDrupalBundle:Sites:siteDetails.html.twig');
-    $event->addParam('coreVersion', $site->getCoreVersion());
-    $event->addParam('latestCoreVersion', $site->getLatestCoreVersion());
+    $event->addParam('coreVersion', $siteDrupal->getCoreVersion());
+    $event->addParam('latestCoreVersion', $siteDrupal->getLatestCoreVersion());
 
     // Check if there are any Drupal modules that require updates.
     /** @var SiteModuleDocument $siteModule */

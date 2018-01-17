@@ -2,7 +2,6 @@
 
 namespace Deeson\WardenBundle\Document;
 
-use Deeson\WardenDrupalBundle\Document\ModuleDocument;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as MongoDB;
 
 /**
@@ -30,7 +29,7 @@ class SiteDocument extends BaseDocument {
   /**
    * @Mongodb\Hash
    */
-  protected $coreVersion;
+  //protected $coreVersion;
 
   /**
    * @Mongodb\Field(type="string")
@@ -131,14 +130,14 @@ class SiteDocument extends BaseDocument {
   /**
    * @return mixed
    */
-  public function getCoreVersion() {
+  /*public function getCoreVersion() {
     return (empty($this->coreVersion['current'])) ? '0' : $this->coreVersion['current'];
-  }
+  }*/
 
   /**
    * @param mixed $coreVersion
    */
-  public function setCoreVersion($coreVersion) {
+  /*public function setCoreVersion($coreVersion) {
     // @todo how to get this?
     $majorRelease = ModuleDocument::getMajorVersion($coreVersion);
     if (!isset($this->coreVersion)) {
@@ -147,44 +146,44 @@ class SiteDocument extends BaseDocument {
     /*$this->coreVersion = array_merge(array(
       'release' => $majorRelease,
       'current' => $coreVersion,
-    ));*/
+    ));*
     $this->coreVersion['release'] = $majorRelease;
     $this->coreVersion['current'] = $coreVersion;
-  }
+  }*/
 
   /**
    * @return mixed
    */
-  public function getCoreReleaseVersion() {
+  /*public function getCoreReleaseVersion() {
     return (empty($this->coreVersion['release'])) ? '0' : $this->coreVersion['release'];
-  }
+  }*/
 
   /**
    * @return mixed
    */
-  public function getLatestCoreVersion() {
+  /*public function getLatestCoreVersion() {
     return (empty($this->coreVersion['latest'])) ? '0' : $this->coreVersion['latest'];
-  }
+  }*/
 
   /**
    * @param mixed $latestVersion
    * @param boolean $isSecurity
    */
-  public function setLatestCoreVersion($latestVersion, $isSecurity = FALSE) {
+  /*public function setLatestCoreVersion($latestVersion, $isSecurity = FALSE) {
     /*$this->coreVersion += array(
       'latest' => $latestVersion,
       'isSecurity' => $isSecurity,
-    );*/
+    );*
     $this->coreVersion['latest'] = $latestVersion;
     $this->coreVersion['isSecurity'] = $isSecurity;
-  }
+  }*/
 
   /**
    * @return boolean
    */
-  public function getIsSecurityCoreVersion() {
+  /*public function getIsSecurityCoreVersion() {
     return (empty($this->coreVersion['isSecurity'])) ? FALSE : $this->coreVersion['isSecurity'];
-  }
+  }*/
 
   /**
    * @return mixed
@@ -249,9 +248,9 @@ class SiteDocument extends BaseDocument {
    * @return bool
    *   TRUE if the current core version is less than the latest core version.
    */
-  public function hasOlderCoreVersion() {
+  /*public function hasOlderCoreVersion() {
     return $this->getCoreVersion() < $this->getLatestCoreVersion();
-  }
+  }*/
 
   /**
    * @return mixed

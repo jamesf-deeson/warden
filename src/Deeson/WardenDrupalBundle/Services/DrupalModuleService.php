@@ -107,7 +107,7 @@ class DrupalModuleService {
     foreach ($modules as $module) {
       /** @var ModuleDocument $module */
       $this->logger->addInfo('Remove module "' . $module->getName() . '" as it has no sites associated to it.');
-      print "Remove module \"" . $module->getName() . "\" as it has no sites associated to it.\n";
+      print "Removing module \"" . $module->getName() . "\" as it has no sites associated to it.\n";
       $this->moduleManager->deleteDocument($module->getId());
     }
   }
