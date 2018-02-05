@@ -7,6 +7,7 @@ use Deeson\WardenBundle\Document\ModuleDocument;
 use Deeson\WardenBundle\Document\SiteDocument;
 use Deeson\WardenBundle\Event\DashboardUpdateEvent;
 use Deeson\WardenBundle\Services\MailService;
+use Maknz\Slack\Client;
 use Monolog\Logger;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -163,7 +164,7 @@ class DashboardManager extends BaseManager {
   /**
    * Sends an email based upon the sites that listed on the dashboard.
    */
-  public function sendUpdateEmail() {
+  public function sendNotificationEmail() {
     $this->logger->addInfo('Send email with list of sites on the dashboard');
 
     $to = $this->container->getParameter('warden.email.dashboard.alert_address');
@@ -188,5 +189,49 @@ class DashboardManager extends BaseManager {
     else {
       $this->logger->addError('Email failed to send to ' . $to . ' from ' . $from . ' with list of sites on the dashboard: ' . $this->mailer->getErrors());
     }
+  }
+
+  /**
+   *
+   */
+  public function sendSlackNotification() {
+    $this->logger->addInfo('Send Slack notification with list of sites on the dashboard');
+
+    $slackHookUrl = $this->container->getParameter('warden.dashboard.slack.hook_url');
+
+    if (empty($slackHookUrl)) {
+      $this->logger->addError('There is no value for "warden.dashboard.slack.hook_url" so the dashboard notification to Slack can not be sent');
+      return;
+    }
+
+    // @todo set the text for this via a variable?
+    $message = "@channel Here is the full list of sites from Warden that need security updates applied:\n\n";
+
+    $dashboardSites = $this->getAllDocuments();
+    /** @var DashboardDocument $dashboardSite */
+    foreach ($dashboardSites as $dashboardSite) {
+      // Get a list of modules that have security updates.
+      /** @var SiteDocument $site */
+      $site = $this->siteManager->getDocumentById($dashboardSite->getSiteId());
+      $moduleUpdates = $site->getModulesRequiringUpdates();
+      $modulesHaveSecurityUpdate = [];
+      foreach ($moduleUpdates as $module) {
+        if (!$module['isSecurity']) {
+          continue;
+        }
+        $modulesHaveSecurityUpdate[] = $module['name'];
+      }
+      $moduleUpdateList = implode(', ', $modulesHaveSecurityUpdate);
+
+      // @todo check if the site needs a core update.
+
+      $message .= ' - ' . $site->getName() . (!empty($moduleUpdateList) ? " ($moduleUpdateList)" : '' ) . "\n";
+    }
+
+    $client = new Client($slackHookUrl);
+    $client->send($message);
+
+    $this->logger->addInfo('Slack notification send to "' . $slackHookUrl . '" with list of sites on the dashboard');
+
   }
 }
