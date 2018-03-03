@@ -164,7 +164,7 @@ class DashboardManager extends BaseManager {
   /**
    * Sends an email based upon the sites that listed on the dashboard.
    */
-  public function sendNotificationEmail() {
+  public function sendEmailNotification() {
     $this->logger->addInfo('Send email with list of sites on the dashboard');
 
     $to = $this->container->getParameter('warden.email.dashboard.alert_address');
@@ -192,7 +192,7 @@ class DashboardManager extends BaseManager {
   }
 
   /**
-   *
+   * Sends a notification to a Slack endpoint with the list of sites that need updating.
    */
   public function sendSlackNotification() {
     $this->logger->addInfo('Send Slack notification with list of sites on the dashboard');
@@ -204,17 +204,24 @@ class DashboardManager extends BaseManager {
       return;
     }
 
-    // @todo set the text for this via a variable?
+    // @todo set the text for this via a variable/settings document?
     $message = "@channel Here is the full list of sites from Warden that need security updates applied:\n\n";
 
     $dashboardSites = $this->getAllDocuments();
     /** @var DashboardDocument $dashboardSite */
     foreach ($dashboardSites as $dashboardSite) {
-      // Get a list of modules that have security updates.
       /** @var SiteDocument $site */
       $site = $this->siteManager->getDocumentById($dashboardSite->getSiteId());
-      $moduleUpdates = $site->getModulesRequiringUpdates();
+
+      /** @todo handle this for being plugable - 2.0 */
       $modulesHaveSecurityUpdate = [];
+      // Check if Core is out of date.
+      if ($site->getIsSecurityCoreVersion()) {
+        $modulesHaveSecurityUpdate[] = 'Drupal Core';
+      }
+
+      // Get a list of modules that have security updates.
+      $moduleUpdates = $site->getModulesRequiringUpdates();
       foreach ($moduleUpdates as $module) {
         if (!$module['isSecurity']) {
           continue;
@@ -222,8 +229,6 @@ class DashboardManager extends BaseManager {
         $modulesHaveSecurityUpdate[] = $module['name'];
       }
       $moduleUpdateList = implode(', ', $modulesHaveSecurityUpdate);
-
-      // @todo check if the site needs a core update.
 
       $message .= ' - ' . $site->getName() . (!empty($moduleUpdateList) ? " ($moduleUpdateList)" : '' ) . "\n";
     }

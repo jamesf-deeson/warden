@@ -30,7 +30,7 @@ class DashboardSendNotificationCommand extends ContainerAwareCommand {
 
     switch ($notificationType) {
       case 'email':
-        $dashboardManager->sendNotificationEmail();
+        $dashboardManager->sendEmailNotification();
         break;
       case 'slack':
         $dashboardManager->sendSlackNotification();
